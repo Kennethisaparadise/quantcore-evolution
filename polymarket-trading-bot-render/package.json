@@ -1,0 +1,36 @@
+{
+  "name": "polymarket-trading-bot-render",
+  "version": "1.0.0",
+  "description": "Master Trading System - Tri-Rhythms + HFT for Polymarket",
+  "main": "src/master_trading_system.py",
+  "scripts": {
+    "start": "python src/master_trading_system.py",
+    "test": "python -m pytest tests/ -v",
+    "demo": "python src/master_trading_system.py --demo",
+    "gann": "python src/gann_calculator.py",
+    "tri": "python src/tri_rhythm_calculator.py",
+    "connector": "python src/polymarket_connector.py"
+  },
+  "keywords": [
+    "trading",
+    "algorithmic-trading",
+    "polymarket",
+    "tri-rhythms",
+    "gann",
+    "hftrading",
+    "cryptocurrency",
+    "prediction-markets"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "requests": ">=2.31.0",
+    "python-dotenv": ">=1.0.0",
+    "pyyaml": ">=6.0",
+    "python-dateutil": ">=2.8",
+    "websockets": ">=12.0",
+    "colorlog": ">=6.7",
+    "pytest": ">=7.4",
+    "pytest-asyncio": ">=0.21"
+  }
+}
