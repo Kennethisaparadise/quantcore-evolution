@@ -1,8 +1,22 @@
 # QuantCore Version History
 
-## Current Version: v2.1.0 (2026-02-23)
+## Current Version: v2.2.0 (2026-02-23)
 
-### What's New in v2.1.0 - Level 2: Order Book Warfare
+### What's New in v2.2.0 - Fee-Aware Execution
+
+#### v2.2.0 - Fee-Aware Execution (`engine/fee_aware.py`)
+- **Configurable fee schedules** per exchange
+- **30-day volume tracking** for tier determination
+- **Maker/Taker detection** based on order type and price
+- **Fee comparison** across 6 exchanges
+- **Fee-aware position sizing** with capital buffers
+- **BNB/loyalty discounts** support
+
+**Exchanges:** Binance, Coinbase, Alpaca, dYdX, Hyperliquid, Robinhood
+
+---
+
+## v2.1.0 (2026-02-23) - Level 2: Order Book Warfare
 
 #### v2.1.0 - Microstructure (`engine/microstructure.py`)
 - **Order Book Imbalance Detector** - bid vs ask volume at top N levels
