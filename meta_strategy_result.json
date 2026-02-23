@@ -1,0 +1,61 @@
+{
+  "id": "meta_2_20260222235252",
+  "name": "Meta-Strategy-3",
+  "strategies": [
+    {
+      "id": "momentum_1",
+      "name": "Momentum Burst",
+      "strategy_type": "momentum",
+      "params": {
+        "lookback": 20,
+        "threshold": 0.05
+      },
+      "fitness": 0.0,
+      "regime_performance": {}
+    },
+    {
+      "id": "breakout_1",
+      "name": "Volatility Breakout",
+      "strategy_type": "breakout",
+      "params": {
+        "lookback": 20,
+        "atr_multiplier": 2.0
+      },
+      "fitness": 0.0,
+      "regime_performance": {}
+    }
+  ],
+  "regime_mappings": [
+    {
+      "regime": "bull",
+      "strategy_id": "momentum_1",
+      "confidence_threshold": 0.5998532412807633,
+      "enabled": true
+    },
+    {
+      "regime": "bear",
+      "strategy_id": "breakout_1",
+      "confidence_threshold": 0.7982706263987469,
+      "enabled": true
+    }
+  ],
+  "switch_config": {
+    "min_hold_time": 1,
+    "reentry_cooldown": 3,
+    "transition_mode": "blend",
+    "hysteresis": 0.15404258025571,
+    "confidence_threshold": 0.7440485456226611
+  },
+  "overall_fitness": 0.8841838309257073,
+  "regime_fitness": {
+    "bear": 0.16586291254061653,
+    "ranging": 0.7318890689583145,
+    "bull": -0.2869796090654766,
+    "high_vol": -3.3427442562522227,
+    "sideways": 8.402891038447304
+  },
+  "switch_count": 5,
+  "created_at": "2026-02-22T23:52:52.895953",
+  "generation": 5,
+  "parent_id": null
+}
