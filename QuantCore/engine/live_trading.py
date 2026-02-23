@@ -141,7 +141,7 @@ class TradingConfig:
     circuit_breakers: Dict[str, float] = field(default_factory=lambda: {
         'daily_loss_limit': 0.05,
         'hourly_loss_limit': 0.02,
-        'consecutive_losses': 5
+        'consecutive_losses': 10
     })
     
     # Execution
