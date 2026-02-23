@@ -1,8 +1,20 @@
 # QuantCore Version History
 
-## Current Version: v2.5.0 (2026-02-23)
+## Current Version: v2.6.0 (2026-02-23)
 
-### What's New in v2.5.0 - Withdrawal Optimizer
+### What's New in v2.6.0 - Live Dashboard
+
+#### v2.6.0 - Live Dashboard (`engine/dashboard.py`)
+- **21 module status cards** - real-time visualization
+- **Equity tracking** - with PnL and drawdown
+- **Trade log** - color-coded by direction
+- **Performance metrics** - win rate, total trades
+- **HTML dashboard export** - view in browser
+- **Event feed** - all system events
+
+---
+
+## v2.5.0 (2026-02-23) - Withdrawal Optimizer
 
 #### v2.5.0 - Withdrawal Optimizer (`engine/withdrawal_optimizer.py`)
 - **Fixed percent** - 4% rule
