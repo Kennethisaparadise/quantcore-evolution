@@ -1,10 +1,16 @@
 # QuantCore Version History
 
-## Current Version: v2.0.0 (2026-02-23)
+## Current Version: v2.1.0 (2026-02-23)
 
-### Major Release: The Complete Trading Intelligence System
+### What's New in v2.1.0 - Level 2: Order Book Warfare
 
-**11 Integrated Modules** - A self-compounding, self-improving, multi-dimensional trading organism.
+#### v2.1.0 - Microstructure (`engine/microstructure.py`)
+- **Order Book Imbalance Detector** - bid vs ask volume at top N levels
+- **Iceberg Order Hunter** - detect hidden liquidity
+- **Spoofing/Layering Detector** - identify manipulation
+- **Latency Arbitrage Engine** - cross-exchange price differences
+- **Adversarial Algo Hunter** - exploit stop hunts, momentum ignition
+- **Microstructure Pattern Recognition** - tick-level patterns
 
 ---
 

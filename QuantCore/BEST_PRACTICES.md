@@ -19,6 +19,12 @@ QuantCore is an advanced algorithmic trading platform with 9 integrated modules 
 | 9 | Live Trading | EXECUTION | `live_trading.py` |
 | 10 | Real-Time Adaptation | SELF-IMPROVE | `realtime_adaptation.py` |
 | 11 | Compounding Engine | COMPOUND | `compounding_engine.py` |
+| 12 | Order Book Imbalance | IMBALANCE | `microstructure.py` |
+| 13 | Iceberg Hunter | HIDDEN | `microstructure.py` |
+| 14 | Spoofing Detector | MANIPULATION | `microstructure.py` |
+| 15 | Latency Arbitrage | SPEED | `microstructure.py` |
+| 16 | Adversarial Algo Hunter | PREDATOR | `microstructure.py` |
+| 17 | Microstructure Patterns | TICK-LEVEL | `microstructure.py` |
 
 ---
 
