@@ -17,6 +17,7 @@ QuantCore is an advanced algorithmic trading platform with 9 integrated modules 
 | 7 | Sentiment Divergence | EXTERNAL | `sentiment_divergence.py` |
 | 8 | Correlation Pairs | RELATIONSHIPS | `correlation_pairs.py` |
 | 9 | Live Trading | EXECUTION | `live_trading.py` |
+| 10 | Real-Time Adaptation | SELF-IMPROVE | `realtime_adaptation.py` |
 
 ---
 
