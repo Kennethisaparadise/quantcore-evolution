@@ -1,8 +1,20 @@
 # QuantCore Version History
 
-## Current Version: v2.2.0 (2026-02-23)
+## Current Version: v2.3.0 (2026-02-23)
 
-### What's New in v2.2.0 - Fee-Aware Execution
+### What's New in v2.3.0 - Tax-Aware Optimization
+
+#### v2.3.0 - Tax-Aware Optimization (`engine/tax_aware.py`)
+- **Holding period tracking** for every position
+- **Tax-loss harvesting** with automatic detection
+- **Wash sale avoidance** - 30 day window tracking
+- **After-tax fitness function** - optimize for after-tax returns
+- **Short-term vs long-term** tax rate calculation
+- **Tax mutations** - evolve harvest threshold, rates
+
+---
+
+## v2.2.0 (2026-02-23) - Fee-Aware Execution
 
 #### v2.2.0 - Fee-Aware Execution (`engine/fee_aware.py`)
 - **Configurable fee schedules** per exchange
