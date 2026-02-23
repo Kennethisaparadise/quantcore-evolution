@@ -570,10 +570,93 @@ class MetaMutationOperators:
     
     @staticmethod
     def mutate_n_regimes(meta: MetaStrategy, delta: int = 1) -> MetaStrategy:
-        """Mutate the number of regimes (2-6)."""
+        """Mutate the number of regimes (2-6).
+        
+        When regimes increase: split an existing regime
+        When regimes decrease: merge similar regimes
+        """
         meta = copy.deepcopy(meta)
         new_n = meta.regime_config.n_regimes + delta
-        meta.regime_config.n_regimes = max(2, min(6, new_n))
+        new_n = max(2, min(6, new_n))
+        
+        if new_n != meta.regime_config.n_regimes:
+            if new_n > meta.regime_config.n_regimes:
+                # SPLIT: Add a new regime by copying an existing one
+                meta = MetaMutationOperators._split_regime(meta)
+            else:
+                # MERGE: Remove a regime and reassign its strategies
+                meta = MetaMutationOperators._merge_regimes(meta)
+            
+            meta.regime_config.n_regimes = new_n
+        
+        return meta
+    
+    @staticmethod
+    def _split_regime(meta: MetaStrategy) -> MetaStrategy:
+        """Split an existing regime into two sub-regimes."""
+        # Find regime with most strategies
+        regime_counts = {}
+        for mapping in meta.regime_mappings:
+            regime_counts[mapping.regime] = regime_counts.get(mapping.regime, 0) + 1
+        
+        if not regime_counts:
+            return meta
+        
+        # Pick regime to split (one with most mappings)
+        source_regime = max(regime_counts.keys(), key=lambda r: regime_counts[r])
+        
+        # Create new regime
+        all_regimes = list(MetaRegime)
+        used_regimes = set(m.regime for m in meta.regime_mappings)
+        available = [r for r in all_regimes if r not in used_regimes]
+        
+        if not available:
+            return meta
+        
+        new_regime = available[0]
+        
+        # Add mapping for new regime
+        source_strategy = None
+        for mapping in meta.regime_mappings:
+            if mapping.regime == source_regime:
+                source_strategy = mapping.strategy_id
+                break
+        
+        if source_strategy:
+            meta.regime_mappings.append(RegimeMapping(
+                regime=new_regime,
+                strategy_id=source_strategy,
+                confidence_threshold=0.5
+            ))
+        
+        return meta
+    
+    @staticmethod
+    def _merge_regimes(meta: MetaStrategy) -> MetaStrategy:
+        """Merge two similar regimes into one."""
+        if len(meta.regime_mappings) <= 2:
+            return meta  # Can't merge below 2
+        
+        # Find two regimes with same strategy assignment
+        strategy_to_regimes = {}
+        for mapping in meta.regime_mappings:
+            if mapping.strategy_id not in strategy_to_regimes:
+                strategy_to_regimes[mapping.strategy_id] = []
+            strategy_to_regimes[mapping.strategy_id].append(mapping.regime)
+        
+        # Find pair to merge
+        for strategy_id, regimes in strategy_to_regimes.items():
+            if len(regimes) >= 2:
+                # Keep first, remove second
+                keep_regime = regimes[0]
+                remove_regime = regimes[1]
+                
+                meta.regime_mappings = [
+                    m for m in meta.regime_mappings 
+                    if m.regime != remove_regime
+                ]
+                break
+        
         return meta
     
     @staticmethod
@@ -699,6 +782,163 @@ class MetaRegimeDetector:
         }
         
         return regime_map.get(regime, MetaRegime.SIDEWAYS)
+
+
+# ============================================================
+# BAYESIAN REGIME COUNT OPTIMIZER
+# ============================================================
+class BayesianRegimeOptimizer:
+    """
+    Uses BIC (Bayesian Information Criterion) to find optimal regime count.
+    
+    Expert: "Use BIC or Dirichlet process to allow the number of 
+    clusters to vary during evolution."
+    
+    BIC = k * log(n) - 2 * log(L)
+    where k = # parameters, n = # observations, L = likelihood
+    
+    Lower BIC = better (more efficient model)
+    """
+    
+    def __init__(self, min_regimes=2, max_regimes=6):
+        self.min_regimes = min_regimes
+        self.max_regimes = max_regimes
+        
+    def calculate_bic(self, data: pd.DataFrame, n_regimes: int) -> float:
+        """
+        Calculate BIC for a given number of regimes.
+        
+        Uses within-regime variance as likelihood proxy.
+        Falls back to simple heuristic if sklearn unavailable.
+        """
+        try:
+            from sklearn.cluster import KMeans
+        except ImportError:
+            # Fallback: use simple variance heuristic
+            return self._calculate_bic_simple(data, n_regimes)
+        
+        # Extract features
+        returns = data['close'].pct_change().dropna().values[-100:]
+        if len(returns) < 20:
+            return float('inf')
+        
+        # Reshape for sklearn
+        X = returns.reshape(-1, 1)
+        
+        try:
+            # Fit k-means
+            kmeans = KMeans(n_clusters=n_regimes, n_init=10, random_state=42)
+            labels = kmeans.fit_predict(X)
+            
+            # Calculate likelihood (within-cluster variance)
+            log_likelihood = 0
+            for i in range(n_regimes):
+                cluster_points = X[labels == i]
+                if len(cluster_points) > 1:
+                    variance = np.var(cluster_points)
+                    if variance > 0:
+                        log_likelihood += np.sum(np.log(variance))
+            
+            # Number of parameters: k-1 (means) + k (variances)
+            k = 2 * n_regimes - 1
+            n = len(returns)
+            
+            # BIC
+            bic = k * np.log(n) - 2 * log_likelihood
+            
+            return bic
+            
+        except Exception as e:
+            return self._calculate_bic_simple(data, n_regimes)
+    
+    def _calculate_bic_simple(self, data: pd.DataFrame, n_regimes: int) -> float:
+        """Fallback BIC calculation without sklearn."""
+        returns = data['close'].pct_change().dropna().values[-100:]
+        
+        if len(returns) < 20:
+            return float('inf')
+        
+        # Simple heuristic: variance reduction from using more clusters
+        # Use quantiles to approximate clusters
+        quantiles = np.linspace(0, 1, n_regimes + 1)
+        bounds = np.quantile(returns, quantiles)
+        
+        total_variance = np.var(returns)
+        
+        # Within-cluster variance
+        within_var = 0
+        for i in range(n_regimes):
+            cluster = returns[(returns >= bounds[i]) & (returns < bounds[i+1])]
+            if len(cluster) > 1:
+                within_var += np.var(cluster) * len(cluster)
+        
+        within_var /= len(returns)
+        
+        # BIC approximation
+        k = 2 * n_regimes - 1
+        n = len(returns)
+        
+        if within_var > 0:
+            log_likelihood = n * np.log(within_var)
+        else:
+            log_likelihood = -1000
+        
+        bic = k * np.log(n) - 2 * log_likelihood
+        
+        return bic
+    
+    def find_optimal_regimes(self, data: pd.DataFrame) -> Tuple[int, Dict[int, float]]:
+        """
+        Find optimal number of regimes using BIC.
+        
+        Returns: (optimal_count, bic_scores)
+        """
+        bic_scores = {}
+        
+        for n in range(self.min_regimes, self.max_regimes + 1):
+            bic = self.calculate_bic(data, n)
+            bic_scores[n] = bic
+        
+        # Find minimum BIC
+        optimal = min(bic_scores.keys(), key=lambda x: bic_scores[x])
+        
+        return optimal, bic_scores
+    
+    def evaluate_regime_count_fitness(self, meta: MetaStrategy, 
+                                     data: pd.DataFrame,
+                                     base_fitness: float) -> float:
+        """
+        Evaluate fitness with BIC penalty for too many regimes.
+        
+        Penalizes unnecessary complexity while rewarding proper fit.
+        """
+        current_n = meta.regime_config.n_regimes
+        
+        # Get BIC score for current n
+        bic = self.calculate_bic(data, current_n)
+        
+        # Normalize BIC to 0-1 range
+        all_bic = [self.calculate_bic(data, n) for n in range(self.min_regimes, self.max_regimes + 1)]
+        valid_bic = [b for b in all_bic if b != float('inf')]
+        
+        if valid_bic:
+            min_bic = min(valid_bic)
+            max_bic = max(valid_bic)
+            if max_bic > min_bic:
+                bic_normalized = (bic - min_bic) / (max_bic - min_bic)
+            else:
+                bic_normalized = 0.5
+        else:
+            bic_normalized = 0.5
+        
+        # Fitness = base - complexity_penalty
+        # More regimes = higher complexity penalty
+        complexity_penalty = 0.1 * (current_n - self.min_regimes)
+        
+        # Also add BIC-based penalty
+        bic_penalty = bic_normalized * 0.05
+        
+        return base_fitness - complexity_penalty - bic_penalty
 
 
 # ============================================================
