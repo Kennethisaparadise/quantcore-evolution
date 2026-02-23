@@ -1,8 +1,19 @@
 # QuantCore Version History
 
-## Current Version: v2.6.0 (2026-02-23)
+## Current Version: v2.7.0 (2026-02-23)
 
-### What's New in v2.6.0 - Live Dashboard
+### What's New in v2.7.0 - Money Tree
+
+#### v2.7.0 - Money Tree (`engine/money_tree.py`)
+- **Tree visualization** - trunk grows with equity
+- **Strategy branches** - allocation by module
+- **Leaf colors** - profit (green) vs loss (red)
+- **Coin animations** - profits collected
+- **HTML export** - view in browser
+
+---
+
+## v2.6.0 (2026-02-23) - Live Dashboard
 
 #### v2.6.0 - Live Dashboard (`engine/dashboard.py`)
 - **21 module status cards** - real-time visualization
