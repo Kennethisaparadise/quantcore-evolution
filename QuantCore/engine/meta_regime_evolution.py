@@ -413,17 +413,17 @@ class MetaRegimeDetector:
         
         for i in range(50, len(data)):  # Need lookback
             window = data.iloc[:i+1]
-            analysis = self.detector.analyze(window)
+            analysis = self.detector.detect(window)
             
             # Map existing regime to MetaRegime
-            meta_regime = self._map_to_meta_regime(analysis)
+            meta_regime = self._map_regime_to_meta(analysis.regime)
             confidence = analysis.confidence
             
             results.append((i, meta_regime, confidence))
         
         return results
     
-    def _map_to_meta_regime(self, analysis: RegimeAnalysis) -> MetaRegime:
+    def _map_regime_to_meta(self, regime: Regime) -> MetaRegime:
         """Map RegimeDetector output to MetaRegime."""
         regime_map = {
             Regime.TRENDING_UP: MetaRegime.BULL,
@@ -435,7 +435,7 @@ class MetaRegimeDetector:
             Regime.UNKNOWN: MetaRegime.SIDEWAYS,
         }
         
-        return regime_map.get(analysis.regime, MetaRegime.SIDEWAYS)
+        return regime_map.get(regime, MetaRegime.SIDEWAYS)
 
 
 # ============================================================
