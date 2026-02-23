@@ -1,13 +1,21 @@
+# ⚠️ LEGAL DISCLAIMER
+
+**IMPORTANT: READ THIS BEFORE USING QUANTCORE**
+
+QuantCore is provided for **EDUCATIONAL AND RESEARCH PURPOSES ONLY**. It is not investment advice. The creators are not registered investment advisers. This software is provided "AS IS" without warranties. You assume all risk. Past performance does not guarantee future results.
+
+---
+
 # 🐙 QuantCore Evolution Engine
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10+-blue.svg" alt="Python">
-  <img src="https://img.shields.io/badge/Version-2.1.0-green.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-2.7.0-green.svg" alt="Version">
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
-  <img src="https://img.shields.io/badge/Modules-17-red.svg" alt="Modules">
+  <img src="https://img.shields.io/badge/Modules-35-red.svg" alt="Modules">
 </p>
 
-> **17-module self-compounding trading intelligence that evolves in real time and reads order books.**
+> **35-module self-evolving trading intelligence that predicts, visualizes, and trades autonomously.**
 
 QuantCore is a next-generation algorithmic trading system that combines genetic evolution, regime detection, microstructure analysis, and real-time adaptation into a single self-improving organism.
 
