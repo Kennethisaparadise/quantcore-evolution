@@ -1,8 +1,20 @@
 # QuantCore Version History
 
-## Current Version: v2.4.0 (2026-02-23)
+## Current Version: v2.5.0 (2026-02-23)
 
-### What's New in v2.4.0 - Multi-Account Allocator
+### What's New in v2.5.0 - Withdrawal Optimizer
+
+#### v2.5.0 - Withdrawal Optimizer (`engine/withdrawal_optimizer.py`)
+- **Fixed percent** - 4% rule
+- **Dynamic withdrawals** - adjust based on performance
+- **Tax-aware** - prefer long-term gains
+- **Drawdown protection** - pause if >15% DD
+- **Goal-based planning** - retirement, house, etc.
+- **Withdrawal mutations** - evolve rate, frequency, strategy
+
+---
+
+## v2.4.0 (2026-02-23) - Multi-Account Allocator
 
 #### v2.4.0 - Multi-Account Allocator (`engine/multi_account.py`)
 - **Multiple account types** - taxable, IRA, Roth, offshore
