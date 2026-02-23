@@ -150,11 +150,72 @@ class StrategyGene:
         )
 
 
+# ============================================================
+# EVOLVABLE REGIME DETECTION CONFIG (Must be before MetaStrategy)
+# ============================================================
+@dataclass
+class EvolvableRegimeConfig:
+    """Evolved config for regime detection."""
+    n_regimes: int = 4
+    method: str = "hmm"
+    volatility_weight: float = 1.0
+    trend_weight: float = 1.0
+    volume_weight: float = 0.5
+    correlation_weight: float = 0.5
+    momentum_weight: float = 0.8
+    vol_high_threshold: float = 0.8
+    vol_low_threshold: float = 0.2
+    trend_strong_threshold: float = 0.7
+    smoothing_window: int = 20
+    
+    def to_dict(self) -> Dict:
+        return {
+            'n_regimes': self.n_regimes, 'method': self.method,
+            'volatility_weight': self.volatility_weight, 'trend_weight': self.trend_weight,
+            'volume_weight': self.volume_weight, 'correlation_weight': self.correlation_weight,
+            'momentum_weight': self.momentum_weight, 'vol_high_threshold': self.vol_high_threshold,
+            'vol_low_threshold': self.vol_low_threshold, 'trend_strong_threshold': self.trend_strong_threshold,
+            'smoothing_window': self.smoothing_window
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'EvolvableRegimeConfig':
+        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class TransitionCostMatrix:
+    """Evolved transition costs between regimes."""
+    bull_to_bear: float = 0.15
+    bull_to_sideways: float = 0.05
+    bear_to_bull: float = 0.15
+    bear_to_sideways: float = 0.05
+    sideways_to_bull: float = 0.03
+    sideways_to_bear: float = 0.03
+    high_vol_penalty: float = 0.10
+    same_regime_bonus: float = -0.02
+    
+    def get_cost(self, from_regime: MetaRegime, to_regime: MetaRegime) -> float:
+        if from_regime == to_regime:
+            return self.same_regime_bonus
+        key = f"{from_regime.value}_to_{to_regime.value}"
+        return getattr(self, key, 0.05)
+    
+    def to_dict(self) -> Dict:
+        return {'bull_to_bear': self.bull_to_bear, 'bull_to_sideways': self.bull_to_sideways,
+            'bear_to_bull': self.bear_to_bull, 'bear_to_sideways': self.bear_to_sideways,
+            'sideways_to_bull': self.sideways_to_bull, 'sideways_to_bear': self.sideways_to_bear,
+            'high_vol_penalty': self.high_vol_penalty, 'same_regime_bonus': self.same_regime_bonus}
+
+
 @dataclass
 class MetaStrategy:
     """
     A meta-strategy that contains multiple strategies and regime switching rules.
     This is the primary unit of evolution in the meta-mutation system.
+    
+    Now includes EVOLVABLE REGIME DETECTION - the GA evolves not just strategies,
+    but HOW it detects regimes.
     """
     id: str
     name: str
@@ -162,10 +223,15 @@ class MetaStrategy:
     regime_mappings: List[RegimeMapping] = field(default_factory=list)
     switch_config: SwitchConfig = field(default_factory=SwitchConfig)
     
+    # NEW: Evolvable regime detection (meta-evolution)
+    regime_config: EvolvableRegimeConfig = field(default_factory=EvolvableRegimeConfig)
+    transition_costs: TransitionCostMatrix = field(default_factory=TransitionCostMatrix)
+    
     # Fitness metrics
     overall_fitness: float = 0.0
     regime_fitness: Dict[MetaRegime, float] = field(default_factory=dict)
     switch_count: int = 0
+    transition_penalty: float = 0.0
     
     # Metadata
     created_at: datetime = field(default_factory=datetime.now)
@@ -179,9 +245,12 @@ class MetaStrategy:
             'strategies': [s.to_dict() for s in self.strategies],
             'regime_mappings': [m.to_dict() for m in self.regime_mappings],
             'switch_config': self.switch_config.to_dict(),
+            'regime_config': self.regime_config.to_dict() if self.regime_config else EvolvableRegimeConfig().to_dict(),
+            'transition_costs': self.transition_costs.to_dict() if self.transition_costs else TransitionCostMatrix().to_dict(),
             'overall_fitness': self.overall_fitness,
             'regime_fitness': {k.value: v for k, v in self.regime_fitness.items()},
             'switch_count': self.switch_count,
+            'transition_penalty': self.transition_penalty,
             'created_at': self.created_at.isoformat(),
             'generation': self.generation,
             'parent_id': self.parent_id
@@ -189,15 +258,25 @@ class MetaStrategy:
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'MetaStrategy':
+        # Handle both old and new format
+        regime_config = data.get('regime_config', {})
+        transition_costs = data.get('transition_costs', {})
+        
         ms = cls(
             id=data.get('id', ''),
             name=data.get('name', ''),
             strategies=[StrategyGene.from_dict(s) for s in data.get('strategies', [])],
             regime_mappings=[RegimeMapping.from_dict(m) for m in data.get('regime_mappings', [])],
             switch_config=SwitchConfig.from_dict(data.get('switch_config', {})),
+            regime_config=EvolvableRegimeConfig.from_dict(regime_config) if regime_config else EvolvableRegimeConfig(),
+            transition_costs=TransitionCostMatrix() if not transition_costs else TransitionCostMatrix(**{
+                k: v for k, v in transition_costs.items() 
+                if k in TransitionCostMatrix.__dataclass_fields__
+            }),
             overall_fitness=data.get('overall_fitness', 0.0),
             regime_fitness={MetaRegime(k): v for k, v in data.get('regime_fitness', {}).items()},
             switch_count=data.get('switch_count', 0),
+            transition_penalty=data.get('transition_penalty', 0.0),
             generation=data.get('generation', 0),
             parent_id=data.get('parent_id')
         )
@@ -393,8 +472,101 @@ class MetaMutationOperators:
                 meta_b.switch_config.transition_mode, meta_a.switch_config.transition_mode
         
         return meta_a, meta_b
+    
+    # ============================================================
+    # REGIME DETECTION EVOLUTION MUTATIONS (Meta-Evolution)
+    # ============================================================
+    
+    @staticmethod
+    def mutate_n_regimes(meta: MetaStrategy, delta: int = 1) -> MetaStrategy:
+        """Mutate the number of regimes (2-6)."""
+        meta = copy.deepcopy(meta)
+        new_n = meta.regime_config.n_regimes + delta
+        meta.regime_config.n_regimes = max(2, min(6, new_n))
+        return meta
+    
+    @staticmethod
+    def mutate_detection_method(meta: MetaStrategy) -> MetaStrategy:
+        """Switch between detection methods."""
+        meta = copy.deepcopy(meta)
+        methods = ['hmm', 'kmeans', 'rule', 'ensemble']
+        current = methods.index(meta.regime_config.method) if meta.regime_config.method in methods else 0
+        meta.regime_config.method = methods[(current + 1) % len(methods)]
+        return meta
+    
+    @staticmethod
+    def mutate_feature_weight(meta: MetaStrategy, feature: str = None, delta: float = 0.1) -> MetaStrategy:
+        """Mutate feature weights for regime detection."""
+        meta = copy.deepcopy(meta)
+        
+        features = ['volatility_weight', 'trend_weight', 'volume_weight', 
+                   'correlation_weight', 'momentum_weight']
+        
+        if feature is None:
+            feature = random.choice(features)
+        
+        if hasattr(meta.regime_config, feature):
+            current = getattr(meta.regime_config, feature)
+            setattr(meta.regime_config, feature, max(0.1, min(2.0, current + delta)))
+        
+        return meta
+    
+    @staticmethod
+    def mutate_vol_threshold(meta: MetaStrategy, delta: float = 0.05) -> MetaStrategy:
+        """Mutate volatility thresholds."""
+        meta = copy.deepcopy(meta)
+        
+        if random.random() < 0.5:
+            meta.regime_config.vol_high_threshold = max(0.5, min(1.0, 
+                meta.regime_config.vol_high_threshold + delta))
+        else:
+            meta.regime_config.vol_low_threshold = max(0.1, min(0.5, 
+                meta.regime_config.vol_low_threshold - delta))
+        
+        return meta
+    
+    @staticmethod
+    def mutate_smoothing_window(meta: MetaStrategy, delta: int = 2) -> MetaStrategy:
+        """Mutate smoothing window for regime detection."""
+        meta = copy.deepcopy(meta)
+        meta.regime_config.smoothing_window = max(5, min(50, 
+            meta.regime_config.smoothing_window + delta))
+        return meta
+    
+    # ============================================================
+    # TRANSITION COST MUTATIONS
+    # ============================================================
+    
+    @staticmethod
+    def mutate_transition_cost(meta: MetaStrategy, from_regime: MetaRegime = None, 
+                             to_regime: MetaRegime = None, delta: float = 0.02) -> MetaStrategy:
+        """Mutate transition cost between regimes."""
+        meta = copy.deepcopy(meta)
+        
+        if from_regime is None or to_regime is None:
+            # Random pair
+            regimes = list(MetaRegime)
+            from_regime, to_regime = random.sample(regimes, 2)
+        
+        key = f"{from_regime.value}_to_{to_regime.value}"
+        
+        if hasattr(meta.transition_costs, key):
+            current = getattr(meta.transition_costs, key)
+            setattr(meta.transition_costs, key, max(0.0, min(0.5, current + delta)))
+        
+        return meta
+    
+    @staticmethod
+    def mutate_high_vol_penalty(meta: MetaStrategy, delta: float = 0.01) -> MetaStrategy:
+        """Mutate penalty for transitioning to high volatility."""
+        meta = copy.deepcopy(meta)
+        meta.transition_costs.high_vol_penalty = max(0.0, min(0.3, 
+            meta.transition_costs.high_vol_penalty + delta))
+        return meta
 
 
+# ============================================================
+# EVOLVABLE REGIME DETECTION CONFIG
 # ============================================================
 # REGIME DETECTOR (Wrapper)
 # ============================================================
@@ -462,6 +634,7 @@ class MetaEvolutionEngine:
         
         # Mutation operators list
         self.mutation_operators = [
+            # Strategy ↔ Regime mapping mutations
             ('assign_strategy_to_regime', self._mutate_assign),
             ('swap_strategies', self._mutate_swap),
             ('mutate_confidence', self._mutate_confidence),
@@ -469,6 +642,15 @@ class MetaEvolutionEngine:
             ('mutate_hysteresis', self._mutate_hysteresis),
             ('mutate_transition', self._mutate_transition),
             ('mutate_cooldown', self._mutate_cooldown),
+            # NEW: Regime detection evolution (meta-evolution)
+            ('mutate_n_regimes', self._mutate_n_regimes),
+            ('mutate_detection_method', self._mutate_detection_method),
+            ('mutate_feature_weight', self._mutate_feature_weight),
+            ('mutate_vol_threshold', self._mutate_vol_threshold),
+            ('mutate_smoothing', self._mutate_smoothing),
+            # NEW: Transition cost evolution
+            ('mutate_transition_cost', self._mutate_transition_cost),
+            ('mutate_high_vol_penalty', self._mutate_high_vol_penalty),
         ]
     
     def initialize_population(self, seed_strategies: List[StrategyGene], 
@@ -591,8 +773,29 @@ class MetaEvolutionEngine:
                 regime_fitness[regime] = 0.0
         
         # Overall fitness = weighted average across regimes
-        # Bonus for lower switch count
-        switch_penalty = switch_count * 0.05
+        # Apply evolved transition costs (not just flat penalty)
+        switch_penalty = 0.0
+        
+        # Track regime transitions for cost calculation
+        transition_history = []
+        prev_regime = None
+        
+        for bar_idx, regime, confidence in regime_sequence:
+            if prev_regime is not None and regime != prev_regime:
+                transition_history.append((prev_regime, regime))
+            prev_regime = regime
+        
+        # Calculate transition cost based on evolved matrix
+        for from_reg, to_reg in transition_history:
+            cost = meta.transition_costs.get_cost(from_reg, to_reg)
+            switch_penalty += cost
+        
+        # Add high volatility penalty if we're in HIGH_VOL
+        high_vol_bars = sum(1 for _, r, _ in regime_sequence if r == MetaRegime.HIGH_VOL)
+        if high_vol_bars > len(regime_sequence) * 0.2:  # >20% in high vol
+            switch_penalty += meta.transition_costs.high_vol_penalty
+        
+        meta.transition_penalty = switch_penalty
         
         overall_fitness = np.mean(list(regime_fitness.values())) - switch_penalty if regime_fitness else 0.0
         
@@ -669,6 +872,41 @@ class MetaEvolutionEngine:
         """Mutate cooldown."""
         delta = random.choice([-1, 1])
         return MetaMutationOperators.mutate_cooldown(meta, delta)
+    
+    # NEW: Regime detection evolution mutations
+    def _mutate_n_regimes(self, meta: MetaStrategy) -> MetaStrategy:
+        """Mutate number of regimes."""
+        delta = random.choice([-1, 1])
+        return MetaMutationOperators.mutate_n_regimes(meta, delta)
+    
+    def _mutate_detection_method(self, meta: MetaStrategy) -> MetaStrategy:
+        """Mutate detection method."""
+        return MetaMutationOperators.mutate_detection_method(meta)
+    
+    def _mutate_feature_weight(self, meta: MetaStrategy) -> MetaStrategy:
+        """Mutate feature weights."""
+        delta = random.uniform(-0.1, 0.1)
+        return MetaMutationOperators.mutate_feature_weight(meta, delta=delta)
+    
+    def _mutate_vol_threshold(self, meta: MetaStrategy) -> MetaStrategy:
+        """Mutate volatility thresholds."""
+        delta = random.uniform(0.02, 0.08)
+        return MetaMutationOperators.mutate_vol_threshold(meta, delta)
+    
+    def _mutate_smoothing(self, meta: MetaStrategy) -> MetaStrategy:
+        """Mutate smoothing window."""
+        delta = random.choice([-2, 2])
+        return MetaMutationOperators.mutate_smoothing_window(meta, delta)
+    
+    def _mutate_transition_cost(self, meta: MetaStrategy) -> MetaStrategy:
+        """Mutate transition costs."""
+        delta = random.uniform(-0.02, 0.02)
+        return MetaMutationOperators.mutate_transition_cost(meta, delta=delta)
+    
+    def _mutate_high_vol_penalty(self, meta: MetaStrategy) -> MetaStrategy:
+        """Mutate high volatility penalty."""
+        delta = random.uniform(-0.01, 0.01)
+        return MetaMutationOperators.mutate_high_vol_penalty(meta, delta)
     
     def evolve(self, market_data: pd.DataFrame, 
                fitness_func: Callable, 
