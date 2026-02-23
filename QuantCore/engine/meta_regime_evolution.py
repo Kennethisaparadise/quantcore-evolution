@@ -473,6 +473,97 @@ class MetaMutationOperators:
         
         return meta_a, meta_b
     
+    @staticmethod
+    def crossover_regime_configs(meta_a: MetaStrategy, meta_b: MetaStrategy) -> Tuple[MetaStrategy, MetaStrategy]:
+        """Crossover regime detection configs between two meta-strategies.
+        
+        This is how you breed super-adapters: take the regime detection 
+        config from one and mix with the other.
+        """
+        meta_a = copy.deepcopy(meta_a)
+        meta_b = copy.deepcopy(meta_b)
+        
+        # Swap n_regimes
+        if random.random() < 0.5:
+            meta_a.regime_config.n_regimes, meta_b.regime_config.n_regimes = \
+                meta_b.regime_config.n_regimes, meta_a.regime_config.n_regimes
+        
+        # Swap detection method
+        if random.random() < 0.5:
+            meta_a.regime_config.method, meta_b.regime_config.method = \
+                meta_b.regime_config.method, meta_a.regime_config.method
+        
+        # Swap feature weights
+        if random.random() < 0.5:
+            meta_a.regime_config.volatility_weight, meta_b.regime_config.volatility_weight = \
+                meta_b.regime_config.volatility_weight, meta_a.regime_config.volatility_weight
+            meta_a.regime_config.trend_weight, meta_b.regime_config.trend_weight = \
+                meta_b.regime_config.trend_weight, meta_a.regime_config.trend_weight
+        
+        return meta_a, meta_b
+    
+    @staticmethod
+    def crossover_transition_costs(meta_a: MetaStrategy, meta_b: MetaStrategy) -> Tuple[MetaStrategy, MetaStrategy]:
+        """Crossover transition cost matrices."""
+        meta_a = copy.deepcopy(meta_a)
+        meta_b = copy.deepcopy(meta_b)
+        
+        # Swap individual transition costs
+        cost_keys = ['bull_to_bear', 'bull_to_sideways', 'bear_to_bull', 
+                     'bear_to_sideways', 'sideways_to_bull', 'sideways_to_bear',
+                     'high_vol_penalty', 'same_regime_bonus']
+        
+        for key in cost_keys:
+            if random.random() < 0.3:  # 30% chance per cost
+                val_a = getattr(meta_a.transition_costs, key)
+                val_b = getattr(meta_b.transition_costs, key)
+                setattr(meta_a.transition_costs, key, val_b)
+                setattr(meta_b.transition_costs, key, val_a)
+        
+        return meta_a, meta_b
+    
+    @staticmethod
+    def crossover_strategy_pools(meta_a: MetaStrategy, meta_b: MetaStrategy) -> Tuple[MetaStrategy, MetaStrategy]:
+        """Crossover entire strategy pools between meta-strategies.
+        
+        Takes half the strategies from each parent to create children.
+        """
+        meta_a = copy.deepcopy(meta_a)
+        meta_b = copy.deepcopy(meta_b)
+        
+        # Get half from each
+        n_a = len(meta_a.strategies) // 2
+        n_b = len(meta_b.strategies) // 2
+        
+        # Create new pools
+        new_a_strategies = meta_a.strategies[:n_a] + meta_b.strategies[:n_b]
+        new_b_strategies = meta_b.strategies[n_b:] + meta_a.strategies[n_a:]
+        
+        meta_a.strategies = new_a_strategies
+        meta_b.strategies = new_b_strategies
+        
+        return meta_a, meta_b
+    
+    @staticmethod
+    def full_crossover(meta_a: MetaStrategy, meta_b: MetaStrategy) -> Tuple[MetaStrategy, MetaStrategy]:
+        """Full crossover between two meta-strategies - breeds super-adapters.
+        
+        Recombines:
+        - Strategy pools
+        - Regime mappings  
+        - Switch configs
+        - Regime detection configs
+        - Transition costs
+        """
+        # Apply all crossover types
+        meta_a, meta_b = MetaMutationOperators.crossover_strategy_pools(meta_a, meta_b)
+        meta_a, meta_b = MetaMutationOperators.crossover_regime_mappings(meta_a, meta_b)
+        meta_a, meta_b = MetaMutationOperators.crossover_switch_config(meta_a, meta_b)
+        meta_a, meta_b = MetaMutationOperators.crossover_regime_configs(meta_a, meta_b)
+        meta_a, meta_b = MetaMutationOperators.crossover_transition_costs(meta_a, meta_b)
+        
+        return meta_a, meta_b
+    
     # ============================================================
     # REGIME DETECTION EVOLUTION MUTATIONS (Meta-Evolution)
     # ============================================================
@@ -959,6 +1050,227 @@ class MetaEvolutionEngine:
         if not self.population:
             return None
         return max(self.population, key=lambda x: x.overall_fitness)
+
+
+# ============================================================
+# ENSEMBLE REGIME DETECTOR
+# ============================================================
+class EnsembleRegimeDetector:
+    """
+    Ensemble of multiple regime detectors.
+    
+    Expert insight: "Use an ensemble of detectors and let the GA evolve 
+    which one to trust when. This is like having a committee of market 
+    thermometers and letting the algorithm decide which one to read."
+    
+    Detectors:
+    - GARCH-based: volatility clustering
+    - Trend-based: ADX + Hurst exponent
+    - Volume-based: volume profile anomalies
+    - Correlation-based: pairwise correlation structure
+    """
+    
+    def __init__(self):
+        self.detectors = {
+            'garch': self._garch_detect,
+            'trend': self._trend_detect,
+            'volume': self._volume_detect,
+            'pattern': self._pattern_detect
+        }
+        # Evolvable weights (learned by GA)
+        self.detector_weights = {
+            'garch': 0.25,
+            'trend': 0.25,
+            'volume': 0.25,
+            'pattern': 0.25
+        }
+    
+    def set_weights(self, weights: Dict[str, float]):
+        """Set detector weights (evolved by GA)."""
+        self.detector_weights.update(weights)
+    
+    def detect(self, data: pd.DataFrame) -> Tuple[MetaRegime, float, Dict[str, float]]:
+        """
+        Ensemble detection - combines multiple signals.
+        
+        Returns: (dominant_regime, confidence, detector_votes)
+        """
+        votes = {}
+        
+        for name, detector in self.detectors.items():
+            regime, confidence = detector(data)
+            weight = self.detector_weights.get(name, 0.25)
+            votes[regime.value] = votes.get(regime.value, 0) + confidence * weight
+        
+        # Get winner
+        dominant = max(votes.items(), key=lambda x: x[1])
+        confidence = dominant[1]
+        
+        # Convert back to MetaRegime
+        regime = MetaRegime(dominant[0])
+        
+        return regime, min(confidence, 1.0), votes
+    
+    def _garch_detect(self, data: pd.DataFrame) -> Tuple[MetaRegime, float]:
+        """Detect based on volatility clustering (GARCH-like)."""
+        returns = data['close'].pct_change().dropna()
+        vol = returns.rolling(20).std() * np.sqrt(252)
+        current_vol = vol.iloc[-1] if not pd.isna(vol.iloc[-1]) else 0.3
+        
+        if current_vol > 0.6:
+            return MetaRegime.HIGH_VOL, 0.8
+        elif current_vol < 0.2:
+            return MetaRegime.LOW_VOL, 0.7
+        else:
+            # Check for trend
+            price = data['close']
+            slope = (price.iloc[-1] - price.iloc[-20]) / price.iloc[-20]
+            if slope > 0.05:
+                return MetaRegime.BULL, 0.7
+            elif slope < -0.05:
+                return MetaRegime.BEAR, 0.7
+            return MetaRegime.SIDEWAYS, 0.6
+    
+    def _trend_detect(self, data: pd.DataFrame) -> Tuple[MetaRegime, float]:
+        """Detect based on trend strength (ADX-like + Hurst)."""
+        close = data['close']
+        
+        # Simple trend calculation
+        ma_fast = close.rolling(10).mean()
+        ma_slow = close.rolling(30).mean()
+        
+        trend_strength = abs(ma_fast.iloc[-1] - ma_slow.iloc[-1]) / ma_slow.iloc[-1]
+        
+        if trend_strength > 0.05:
+            if ma_fast.iloc[-1] > ma_slow.iloc[-1]:
+                return MetaRegime.BULL, 0.75
+            else:
+                return MetaRegime.BEAR, 0.75
+        elif trend_strength < 0.01:
+            return MetaRegime.SIDEWAYS, 0.7
+        else:
+            return MetaRegime.TRENDING, 0.6
+    
+    def _volume_detect(self, data: pd.DataFrame) -> Tuple[MetaRegime, float]:
+        """Detect based on volume profile."""
+        volume = data.get('volume', pd.Series([1]*len(data)))
+        
+        avg_vol = volume.rolling(20).mean()
+        current_vol = volume.iloc[-1]
+        vol_ratio = current_vol / avg_vol.iloc[-1] if avg_vol.iloc[-1] > 0 else 1
+        
+        if vol_ratio > 2.0:
+            return MetaRegime.HIGH_VOL, 0.7
+        elif vol_ratio < 0.5:
+            return MetaRegime.LOW_VOL, 0.6
+        else:
+            # Check trend
+            return self._trend_detect(data)
+    
+    def _pattern_detect(self, data: pd.DataFrame) -> Tuple[MetaRegime, float]:
+        """Detect based on pattern recognition (sine wave / cycle)."""
+        close = data['close']
+        
+        # Simple cycle detection
+        recent = close.iloc[-20:]
+        if len(recent) < 10:
+            return MetaRegime.SIDEWAYS, 0.5
+        
+        # Check for clear direction
+        first_half = recent.iloc[:10].mean()
+        second_half = recent.iloc[10:].mean()
+        
+        if second_half > first_half * 1.05:
+            return MetaRegime.BULL, 0.65
+        elif second_half < first_half * 0.95:
+            return MetaRegime.BEAR, 0.65
+        else:
+            return MetaRegime.RANGING, 0.6
+
+
+# ============================================================
+# REGIME HALL OF FAME
+# ============================================================
+class RegimeHallOfFame:
+    """
+    Store the best strategies for each detected regime across all runs.
+    
+    Expert insight: "Extend it to regimeHallOfFame—store the best strategies 
+    for each detected regime across all runs. Then, when the current regime 
+    matches a past one, you can seed the population with those proven champs."
+    """
+    
+    def __init__(self, max_per_regime: int = 10):
+        self.max_per_regime = max_per_regime
+        # {regime: [(meta_strategy, fitness), ...]}
+        self.hall_of_fame: Dict[MetaRegime, List[Tuple[MetaStrategy, float]]] = {
+            r: [] for r in MetaRegime
+        }
+    
+    def add(self, meta: MetaStrategy):
+        """Add a meta-strategy to the Hall of Fame based on its regime fitness."""
+        for regime, fitness in meta.regime_fitness.items():
+            if fitness > 0:  # Only positive performers
+                self._add_to_regime(meta, regime, fitness)
+    
+    def _add_to_regime(self, meta: MetaStrategy, regime: MetaRegime, fitness: float):
+        """Add to specific regime."""
+        entries = self.hall_of_fame[regime]
+        
+        # Check if already exists
+        for i, (existing, _) in enumerate(entries):
+            if existing.id == meta.id:
+                # Update if better
+                if fitness > entries[i][1]:
+                    entries[i] = (meta, fitness)
+                return
+        
+        # Add new
+        entries.append((meta, fitness))
+        
+        # Sort by fitness descending
+        entries.sort(key=lambda x: x[1], reverse=True)
+        
+        # Trim
+        self.hall_of_fame[regime] = entries[:self.max_per_regime]
+    
+    def get_champs_for_regime(self, regime: MetaRegime, n: int = 3) -> List[MetaStrategy]:
+        """Get the top N champions for a specific regime."""
+        entries = self.hall_of_fame.get(regime, [])
+        return [e[0] for e in entries[:n]]
+    
+    def get_all_champs(self) -> List[MetaStrategy]:
+        """Get all Hall of Fame strategies."""
+        champs = []
+        for entries in self.hall_of_fame.values():
+            for meta, _ in entries:
+                if meta not in champs:
+                    champs.append(meta)
+        return champs
+    
+    def seed_population(self, engine: 'MetaEvolutionEngine', regime: MetaRegime) -> List[MetaStrategy]:
+        """Seed the population with Hall of Fame champions for current regime."""
+        champs = self.get_champs_for_regime(regime, n=3)
+        
+        # Clone champions and add to population
+        seeded = []
+        for champ in champs:
+            cloned = copy.deepcopy(champ)
+            cloned.id = f"{cloned.id}_seeded_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            cloned.generation = 0
+            seeded.append(cloned)
+        
+        return seeded
+    
+    def to_dict(self) -> Dict:
+        """Serialize to dict."""
+        return {
+            regime.value: [
+                (meta.to_dict(), fitness) 
+                for meta, fitness in entries
+            ]
+            for regime, entries in self.hall_of_fame.items()
+        }
 
 
 # ============================================================
