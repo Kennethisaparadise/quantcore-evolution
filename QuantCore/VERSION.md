@@ -1,8 +1,20 @@
 # QuantCore Version History
 
-## Current Version: v2.3.0 (2026-02-23)
+## Current Version: v2.4.0 (2026-02-23)
 
-### What's New in v2.3.0 - Tax-Aware Optimization
+### What's New in v2.4.0 - Multi-Account Allocator
+
+#### v2.4.0 - Multi-Account Allocator (`engine/multi_account.py`)
+- **Multiple account types** - taxable, IRA, Roth, offshore
+- **Strategy-to-account allocation** - based on tax efficiency
+- **Asset location optimization** - high turnover → Roth, long-term → taxable
+- **Automatic rebalancing** - when drift exceeds threshold
+- **Fund transfers** between accounts with tax checking
+- **Tax efficiency scoring** - measures portfolio tax efficiency
+
+---
+
+## v2.3.0 (2026-02-23) - Tax-Aware Optimization
 
 #### v2.3.0 - Tax-Aware Optimization (`engine/tax_aware.py`)
 - **Holding period tracking** for every position
