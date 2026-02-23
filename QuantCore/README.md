@@ -1,156 +1,198 @@
-# QuantCore - Multi-Market Quantitative Trading Platform
+# 🐙 QuantCore Evolution Engine
 
-A production-ready, modular algorithmic trading platform supporting multiple markets (Indian, Crypto, Forex, Prediction Markets) with strategy engine, backtesting, and risk management.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue.svg" alt="Python">
+  <img src="https://img.shields.io/badge/Version-2.1.0-green.svg" alt="Version">
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
+  <img src="https://img.shields.io/badge/Modules-17-red.svg" alt="Modules">
+</p>
 
-## Features
+> **17-module self-compounding trading intelligence that evolves in real time and reads order books.**
 
-### Core Components
-- **Market Data Pipeline** - Multi-source data ingestion (OpenAlgo, Polymarket, Generic APIs)
-- **Strategy Engine** - Python-based strategy development with hot-reload support
-- **Central Risk Management** - Position limits, stop-loss, drawdown controls
-- **Execution Engine** - Unified order management across brokers
-- **Trade Ledger** - Complete audit trail of all trades
-- **Backtesting Harness** - VectorBT-powered backtesting
-- **Dashboard** - Real-time monitoring and control
+QuantCore is a next-generation algorithmic trading system that combines genetic evolution, regime detection, microstructure analysis, and real-time adaptation into a single self-improving organism.
 
-### Supported Markets
-| Market | Adapter | Data Types |
-|--------|---------|------------|
-| India (NSE/BSE) | OpenAlgo | Equity, F&O, Commodities, Currency |
-| Prediction Markets | Polymarket | Binary, Categorical, Scalar |
-| Crypto | Generic (CCXT) | Spot, Futures, Perps |
-| Forex | Generic | Spot, Forwards |
-
-## Quick Start
+## 🏃‍♂️ Quick Start
 
 ```bash
-# Clone the repository
-git clone https://github.com/quantcore/QuantCore.git
-cd QuantCore
+# Clone the repo
+git clone https://github.com/Kennethisaparadise/quantcore-evolution.git
+cd quantcore-evolution
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure your broker/API keys
-cp config/config.example.json config/config.json
-# Edit config.json with your credentials
-
-# Run the dashboard
-python -m dashboard.app
-
-# Or run a backtest
-python -m backtest.run --strategy examples/ma_crossover.py --start 2024-01-01 --end 2024-12-31
+# Run paper trading (test it out!)
+python run_paper_trading.py --symbol BTCUSDT --capital 10000 --cycles 100 --interval 60
 ```
 
-## Project Structure
-
-```
-QuantCore/
-├── adapters/           # Market data adapters
-│   ├── openalgo/      # Indian market data (NSE/BSE)
-│   ├── polymarket/    # Prediction market data
-│   └── generic/       # Generic CCXT-based adapters
-├── backtest/          # VectorBT backtesting engine
-├── config/            # Configuration files
-├── data/              # Data storage
-│   ├── csv/           # Raw CSV downloads
-│   └── parquet/       # Processed parquet files
-├── dashboard/         # React dashboard
-├── engine/            # Strategy execution engine
-├── logs/              # Application logs
-├── risk/              # Risk management module
-├── strategies/        # Strategy scripts
-├── utils/             # Utility functions
-└── ledger/            # Trade ledger/Journal
+**Go Live (⚠️ Real Money):**
+```bash
+python run_paper_trading.py --mode live --capital 1000 --symbol BTCUSDT
 ```
 
-## Strategy Example
+## 🧠 The 17 Heads
 
-```python
-from engine.base import Strategy
+| # | Module | Dimension | Description |
+|----|--------|-----------|-------------|
+| 1 | Regime-Switching | WHEN | HMM-based market state detection |
+| 2 | Fractal Time Series | WHAT TF | Multi-timeframe consensus |
+| 3 | Adversarial Validator | SURVIVE | Stress-test against chaos |
+| 4 | Timeline Visualization | SEE | Watch the system think |
+| 5 | Dynamic Regime Count | SELF-DISCOVER | Auto-detect optimal regimes |
+| 6 | Order Flow Shadow | MICRO | Read whale footprints |
+| 7 | Sentiment Divergence | FEEL | External market mood |
+| 8 | Correlation Pairs | RELATE | Multi-asset relationships |
+| 9 | Live Trading | EXECUTE | Paper & live execution |
+| 10 | Real-Time Adaptation | SELF-IMPROVE | Evolves while trading |
+| 11 | Compounding Engine | COMPOUND | Auto-reinvest profits |
+| 12 | Order Book Imbalance | IMBALANCE | Bid/ask depth analysis |
+| 13 | Iceberg Hunter | HIDDEN | Detect hidden liquidity |
+| 14 | Spoofing Detector | MANIPULATION | Catch fake orders |
+| 15 | Latency Arbitrage | SPEED | Cross-exchange arbitrage |
+| 16 | Adversarial Algo Hunter | PREDATOR | Hunt other bots |
+| 17 | Microstructure Patterns | TICK-LEVEL | Recognize patterns |
 
-class MACrossover(Strategy):
-    params = {
-        'fast_period': 10,
-        'slow_period': 20,
-    }
-    
-    def init(self):
-        self.sma_fast = self.indicator('sma', period=self.params.fast_period)
-        self.sma_slow = self.indicator('sma', period=self.params.slow_period)
-    
-    def next(self):
-        if self.crossover(self.sma_fast, self.sma_slow):
-            self.buy()
-        elif self.crossover(self.sma_slow, self.sma_fast):
-            self.sell()
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    QUANTCORE EVOLUTION                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │   REGIME     │  │   FRACTAL    │  │  ADVERSARIAL │       │
+│  │  SWITCHING   │  │ TIME SERIES  │  │  VALIDATOR   │       │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
+│         │                  │                  │                │
+│  ┌──────▼──────────────────▼──────────────────▼───────┐      │
+│  │              EVOLUTION ENGINE                        │      │
+│  │         (Genetic Algorithm + Mutations)             │      │
+│  └──────────────────────┬───────────────────────────────┘      │
+│                         │                                      │
+│  ┌──────────────────────▼───────────────────────────────┐      │
+│  │              MODULE ORCHESTRATOR                      │      │
+│  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐       │      │
+│  │  │ORDER   │ │SENTIMENT│ │CORREL │ │COMPUND │       │      │
+│  │  │FLOW    │ │        │ │PAIRS  │ │ENGINE  │       │      │
+│  │  └────────┘ └────────┘ └────────┘ └────────┘       │      │
+│  └──────────────────────┬───────────────────────────────┘      │
+│                         │                                      │
+│  ┌──────────────────────▼───────────────────────────────┐      │
+│  │            EXECUTION LAYER                            │      │
+│  │     ┌─────────┐        ┌─────────┐                  │      │
+│  │     │ PAPER   │        │  LIVE   │                  │      │
+│  │     │ TRADING │        │ TRADING │                  │      │
+│  │     └─────────┘        └─────────┘                  │      │
+│  └──────────────────────────────────────────────────────┘      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## API Usage
+## 📦 Installation
 
-```python
-from adapters.openalgo import OpenAlgoAdapter
-from engine.backtest import BacktestEngine
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or: venv\Scripts\activate  # Windows
 
-# Download data
-adapter = OpenAlgoAdapter(api_key="your_key")
-data = adapter.download("RELIANCE", start="2024-01-01", end="2024-12-31")
+# Install
+pip install -r requirements.txt
 
-# Run backtest
-engine = BacktestEngine()
-results = engine.run(
-    strategy="strategies/ma_crossover.py",
-    data=data,
-    cash=100000,
-    fees=0.001
-)
-print(results.total_return)
+# Run tests
+python -m pytest tests/
 ```
 
-## Configuration
+## ⚙️ Configuration
 
-See `config/config.example.json` for configuration options:
+Edit `config.json` for your setup:
 
-- Broker API keys
-- Risk management parameters
-- Data storage settings
-- Dashboard configuration
-- Logging preferences
+```json
+{
+  "trading": {
+    "mode": "paper",
+    "exchange": "binance",
+    "initial_capital": 10000
+  },
+  "risk": {
+    "max_drawdown": 0.20,
+    "max_daily_loss": 0.05,
+    "max_positions": 5
+  },
+  "compounding": {
+    "base_risk_per_trade": 0.02,
+    "kelly_fraction": 0.25,
+    "reinvestment_rate": 0.80
+  }
+}
+```
 
-## Risk Management
+## 📊 Module Details
 
-QuantCore implements centralized risk controls:
+### Core Evolution
+- **60+ Seed Strategies** - RSI, MACD, Bollinger, SuperTrend, Ichimoku, Cycle/Sine Wave
+- **70+ Mutation Operators** - Risk, Indicators, Filters, Position, Signals, Stops
+- **Multi-objective Fitness** - Return, Sharpe, Drawdown, Win Rate
 
-- **Position Limits** - Max % of portfolio per position
-- **Drawdown Limits** - Max daily/monthly loss thresholds
-- **Order Limits** - Max orders per day
-- **Slippage Controls** - Max acceptable slippage
-- **Stop Losses** - Automatic stop-loss execution
+### Market Intelligence
+- **Regime Detection** - HMM-based Bull/Bear/Sideways/HighVol/LowVol
+- **Order Flow** - Cumulative delta, large trades, stop hunt detection
+- **Sentiment** - Fear & Greed, news, social, on-chain
+- **Correlations** - Cointegration, pairs trading, rotation
 
-## Dashboard
+### Execution
+- **Paper Trading** - Simulated with realistic slippage
+- **Live Trading** - Binance, Hyperliquid connectors
+- **Risk Guards** - Circuit breakers, max drawdown, position limits
 
-The QuantCore dashboard provides:
+## 🔧 Development
 
-- Real-time position monitoring
-- P&L visualization
-- Strategy performance metrics
-- Trade history
-- Risk exposure alerts
+```bash
+# Run evolution UI
+cd quantcore-evolution
+npm install
+npm run dev
 
-## Contributing
+# Run Python engine directly
+python main.py --evolution --population 100 --generations 20
+```
 
-1. Fork the repository
-2. Create a feature branch
-3. Implement your changes
-4. Add tests
-5. Submit a pull request
+## 📈 Results (Paper Trading)
 
-## License
+*Running live paper trading - updates coming soon!*
 
-MIT License - see LICENSE file for details.
+| Metric | Value |
+|--------|-------|
+| Sharpe Ratio | TBD |
+| CAGR | TBD |
+| Max Drawdown | TBD |
+| Win Rate | TBD |
 
-## Support
+## 🤝 Contributing
 
-- Documentation: https://docs.quantcore.io
-- Issues: GitHub Issues
-- Discord: https://discord.gg/quantcore
+Contributions welcome! Open an issue or PR.
+
+```bash
+# Fork and clone
+git clone https://github.com/YOUR_USERNAME/quantcore-evolution.git
+
+# Create feature branch
+git checkout -b feature/amazing-new-module
+
+# Commit and push
+git add .
+git commit -m "Add amazing new module"
+git push origin feature/amazing-new-module
+```
+
+## 📜 License
+
+MIT License - See [LICENSE](LICENSE) for details.
+
+## ⚠️ Disclaimer
+
+This is **not financial advice**. Trading is risky. Past performance ≠ future results. Use at your own risk.
+
+---
+
+**Star if you think this is cool** ⭐ | [Report Issues](https://github.com/Kennethisaparadise/quantcore-evolution/issues)
